@@ -67,6 +67,12 @@ impl ExtractorCommand {
             .to_owned()
     }
 
+    fn fw_info_addr(view: &BinaryView, offset: u64) -> u64 {
+        view.symbol_by_address(offset)
+            .map(|v| v.address())
+            .unwrap_or(offset)
+    }
+
     fn read_fw_info_of_sym(&self, view: &BinaryView, offset: u64) -> Option<(String, u64, u32)> {
         let (fw_name, address) = view
             .symbol_by_address(offset)
@@ -79,7 +85,8 @@ impl ExtractorCommand {
 
 impl AddressCommand for ExtractorCommand {
     fn valid(&self, view: &BinaryView, addr: u64) -> bool {
-        let Some((_, fw_off, fw_size)) = self.read_fw_info_of_sym(view, addr) else {
+        let Some((fw_off, fw_size)) = self.read_fw_info(view, Self::fw_info_addr(view, addr))
+        else {
             return false;
         };
         view.offset_valid(fw_off) && view.offset_valid(fw_off + u64::from(fw_size))
