@@ -12,4 +12,4 @@ strip = true
 
 [dependencies]
 binaryninja = { git = "https://github.com/Vector35/binaryninja-api.git", branch = "dev", version = "0.1.0" }
-rfd = "0.14.1"
+rfd = "0.15.0"
