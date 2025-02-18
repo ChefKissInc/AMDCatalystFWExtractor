@@ -118,7 +118,7 @@ impl AddressCommand for ExtractorCommand {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn CorePluginInit() -> bool {
     register_command_for_address(
         "Extract GC firmware",
