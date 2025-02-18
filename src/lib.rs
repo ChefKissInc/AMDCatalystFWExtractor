@@ -1,11 +1,13 @@
-//! Copyright © 2024 ChefKiss Inc. Licensed under the Thou Shalt Not Profit License version 1.5.
-//! See LICENSE for details.
+// Copyright © 2024-2025 ChefKiss. Licensed under the Thou Shalt Not Profit License version 1.5.
+// See LICENSE for details.
+
+#![warn(clippy::nursery)]
 
 use binaryninja::{
-    binaryview::{BinaryView, BinaryViewBase, BinaryViewExt},
-    command::{register_for_address, AddressCommand},
-    symbol::Symbol,
     Endianness,
+    binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
+    command::{AddressCommand, register_command_for_address},
+    symbol::Symbol,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -15,14 +17,14 @@ enum FirmwareType {
 }
 
 impl FirmwareType {
-    fn size_field_off(self) -> u64 {
+    const fn size_field_off(self) -> u64 {
         match self {
             Self::Gc => 0xC,
             Self::Sdma => 0x8,
         }
     }
 
-    fn off_field_off(self) -> u64 {
+    const fn off_field_off(self) -> u64 {
         match self {
             Self::Gc => 0x20,
             Self::Sdma => 0x10,
@@ -33,7 +35,7 @@ impl FirmwareType {
 struct ExtractorCommand(FirmwareType);
 
 impl ExtractorCommand {
-    fn new(ty: FirmwareType) -> Self {
+    const fn new(ty: FirmwareType) -> Self {
         Self(ty)
     }
 
@@ -77,7 +79,7 @@ impl ExtractorCommand {
         let (fw_name, address) = view
             .symbol_by_address(offset)
             .map(|v| (Self::sym_to_fw_name(&v), v.address()))
-            .unwrap_or_else(|_| (format!("data_{offset:X}"), offset));
+            .unwrap_or_else(|| (format!("data_{offset:X}"), offset));
         self.read_fw_info(view, address)
             .map(|(fw_off, fw_size)| (fw_name, fw_off, fw_size))
     }
@@ -108,7 +110,7 @@ impl AddressCommand for ExtractorCommand {
             return;
         };
         rfd::MessageDialog::new()
-            .set_level(rfd::MessageLevel::Info)
+            .set_level(rfd::MessageLevel::Error)
             .set_title("Whoops")
             .set_description(format!("File was not saved: {e}"))
             .set_buttons(rfd::MessageButtons::OkCustom("Well, shit".into()))
@@ -118,13 +120,13 @@ impl AddressCommand for ExtractorCommand {
 
 #[no_mangle]
 pub extern "C" fn CorePluginInit() -> bool {
-    register_for_address(
-        "ChefKiss\\Extract GC firmware",
+    register_command_for_address(
+        "Extract GC firmware",
         "",
         ExtractorCommand::new(FirmwareType::Gc),
     );
-    register_for_address(
-        "ChefKiss\\Extract SDMA firmware",
+    register_command_for_address(
+        "Extract SDMA firmware",
         "",
         ExtractorCommand::new(FirmwareType::Sdma),
     );
