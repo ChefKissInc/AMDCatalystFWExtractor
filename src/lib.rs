@@ -7,6 +7,7 @@ use binaryninja::{
     Endianness,
     binary_view::{BinaryView, BinaryViewBase, BinaryViewExt},
     command::{AddressCommand, register_command_for_address},
+    interaction::{MessageBoxButtonSet, MessageBoxIcon, get_save_filename_input, show_message_box},
     symbol::Symbol,
 };
 
@@ -62,10 +63,10 @@ impl ExtractorCommand {
 
     fn sym_to_fw_name(sym: &Symbol) -> String {
         let full_name = sym.full_name();
+        let full_name = full_name.to_string_lossy();
         full_name
-            .as_str()
             .strip_prefix('_')
-            .unwrap_or_else(|| full_name.as_str())
+            .unwrap_or_else(|| &full_name)
             .to_owned()
     }
 
@@ -99,22 +100,20 @@ impl AddressCommand for ExtractorCommand {
             return;
         };
         let data = view.read_vec(fw_off, fw_size.try_into().unwrap());
-        let Some(path) = rfd::FileDialog::new()
-            .set_file_name(format!("{name}.bin"))
-            .set_title(format!("Save {name}"))
-            .save_file()
+        let Some(path) =
+            get_save_filename_input(&format!("Save {name}"), "bin", &format!("{name}.bin"))
         else {
             return;
         };
         let Err(e) = std::fs::write(path, data) else {
             return;
         };
-        rfd::MessageDialog::new()
-            .set_level(rfd::MessageLevel::Error)
-            .set_title("Whoops")
-            .set_description(format!("File was not saved: {e}"))
-            .set_buttons(rfd::MessageButtons::OkCustom("Well, shit".into()))
-            .show();
+        show_message_box(
+            "Whoops",
+            &format!("File was not saved: {e}"),
+            MessageBoxButtonSet::OKButtonSet,
+            MessageBoxIcon::ErrorIcon,
+        );
     }
 }
 
